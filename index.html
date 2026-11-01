@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HKFL Sosyal Medya</title>
+    
+    <!-- Firebase SDK (Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <script>
+      // Firebase Bağlantı Ayarların
+      const firebaseConfig = {
+        apiKey: "AIzaSyCF_KY4E9Ftg97w-M786PzR57R7qhZVrCQ",
+        authDomain: "hkfl-sosyal.firebaseapp.com",
+        databaseURL: "https://hkfl-sosyal-default-rtdb.firebaseio.com",
+        projectId: "hkfl-sosyal",
+        storageBucket: "hkfl-sosyal.firebasestorage.app",
+        messagingSenderId: "800371475332",
+        appId: "1:800371475332:web:a7d34c5e18a3a3f78553d1"
+      };
+
+      // Firebase Başlatma
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.database();
+    </script>
+
+    <style>
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background: linear-gradient(135deg, #f0f2f5 0%, #e2e8f0 100%); margin: 0; padding: 0; color: #1c1e21; min-height: 100vh; }
+
+        /* GİRİŞ & KAYIT KISMI */
+        .auth-container { display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+        .card { background: white; padding: 30px 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 380px; text-align: center; }
+        h2 { margin-bottom: 20px; color: #1877f2; font-size: 24px; }
+        .tabs { display: flex; margin-bottom: 20px; border-bottom: 2px solid #eee; }
+        .tab { flex: 1; padding: 10px; cursor: pointer; font-weight: bold; color: #65676b; border-bottom: 2px solid transparent; }
+        .tab.active { color: #1877f2; border-bottom: 2px solid #1877f2; }
+        input, textarea { width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; outline: none; background: #fafafa; }
+        input:focus, textarea:focus { border-color: #1877f2; background: #fff; }
+        button { width: 100%; background: #1877f2; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; transition: background 0.2s; }
+        button:active { background: #166fe5; }
+        .message { margin-top: 10px; font-size: 14px; display: none; }
+        .error { color: #dc3545; }
+        .success { color: #28a745; }
+        .form-container { display: none; }
+        .form-container.active { display: block; }
+
+        /* ANA UYGULAMA KISMI */
+        #appContainer { display: none; }
+        .header { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(5px); padding: 15px; text-align: center; font-weight: bold; font-size: 18px; color: #1877f2; border-bottom: 1px solid #ddd; position: sticky; top: 0; z-index: 10; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .content { padding: 15px; padding-bottom: 90px; max-width: 600px; margin: auto; }
+        .page { display: none; }
+        .page.active { display: block; }
+
+        /* KEŞFET & MEDYA PAYLAŞIMLARI */
+        .post-box { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 15px; }
+        .post-box textarea { resize: none; height: 70px; margin-bottom: 8px; }
+        .file-upload-label { display: inline-block; background: #e4e6eb; color: #050505; padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
+        .file-upload-label input { display: none; }
+        .post-card { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 15px; position: relative; }
+        
+        .post-card.admin-post { border: 2px solid #ffd700; background: linear-gradient(135deg, #ffffff 0%, #fffdf0 100%); }
+        .admin-badge-tag { position: absolute; top: -10px; right: 15px; background: linear-gradient(45deg, #ffd700, #ff8c00); color: #000; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 10px; }
+
+        .post-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .post-author { font-weight: bold; color: #050505; }
+        .post-text { color: #1c1e21; font-size: 15px; line-height: 1.4; margin-bottom: 10px; word-break: break-word; }
+        .post-media { width: 100%; max-height: 400px; object-fit: cover; border-radius: 8px; margin-bottom: 10px; }
+        .post-actions { border-top: 1px solid #eee; padding-top: 8px; font-size: 13px; color: #65676b; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 5px; }
+        .like-btn { background: none; border: none; color: #65676b; cursor: pointer; padding: 5px 8px; font-size: 14px; border-radius: 4px; }
+        .like-btn.liked { color: #1877f2; font-weight: bold; }
+        .admin-btn { background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 11px; }
+
+        /* MESAJLAŞMA & GRUPLAR */
+        .chat-container { background: white; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); height: 350px; display: flex; flex-direction: column; margin-bottom: 15px; }
+        .chat-header { padding: 12px 15px; border-bottom: 1px solid #eee; font-weight: bold; background: #f8f9fa; border-radius: 10px 10px 0 0; display: flex; align-items: center; justify-content: space-between; }
+        .chat-messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .chat-bubble { max-width: 80%; padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.4; word-break: break-word; }
+        .chat-bubble.mine { background: #1877f2; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .chat-bubble.other { background: #e4e6eb; color: #050505; align-self: flex-start; border-bottom-left-radius: 4px; }
+        .chat-input-area { display: flex; padding: 10px; border-top: 1px solid #eee; gap: 8px; }
+        .chat-input-area input { margin-bottom: 0; }
+        .chat-input-area button { width: auto; padding: 0 16px; }
+
+        /* LİSTELER VE AVATARLAR */
+        .user-list-item { background: white; padding: 12px 15px; margin-bottom: 8px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.05); flex-wrap: wrap; gap: 10px; }
+        .user-info { display: flex; align-items: center; gap: 10px; }
+        .user-avatar-small { width: 38px; height: 38px; background: #e4e6eb; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #050505; flex-shrink: 0; overflow: hidden; object-fit: cover; }
+        .user-avatar-small img { width: 100%; height: 100%; object-fit: cover; }
+        .msg-btn { background: #6c757d; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; width: auto; text-decoration: none; display: inline-flex; align-items: center; }
+
+        /* PROFİL SAYFASI */
+        .profile-card { background: white; border-radius: 10px; padding: 25px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .avatar { width: 90px; height: 90px; background: #1877f2; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 36px; font-weight: bold; margin: 0 auto 15px; overflow: hidden; position: relative; border: 3px solid #1877f2; }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* ALT MENÜ */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(5px); border-top: 1px solid #ddd; display: flex; justify-content: space-around; padding: 8px 0; z-index: 100; box-shadow: 0 -1px 5px rgba(0,0,0,0.05); }
+        .nav-item { border: none; background: none; color: #65676b; font-size: 10px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1; padding: 4px 0; position: relative; }
+        .nav-item.active { color: #1877f2; font-weight: bold; }
+        .nav-item svg { width: 20px; height: 20px; fill: currentColor; }
+
+        @media (min-width: 768px) {
+            .content { padding-bottom: 30px; }
+            .bottom-nav { max-width: 600px; margin: auto; left: 0; right: 0; border-radius: 12px 12px 0 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- GİRİŞ / KAYIT EKRANI -->
+    <div id="authContainer" class="auth-container">
+        <div class="card">
+            <h2>HKFL Sosyal 🎒</h2>
+            
+            <div class="tabs">
+                <div class="tab active" onclick="switchAuthTab('login')">Giriş Yap</div>
+                <div class="tab" onclick="switchAuthTab('register')">Kayıt Ol</div>
+            </div>
+
+            <div id="loginForm" class="form-container active">
+                <input type="text" id="loginUser" placeholder="Kullanıcı Adı">
+                <input type="password" id="loginPass" placeholder="Şifre">
+                <button onclick="handleLogin()">Giriş Yap</button>
+                <p id="loginMsg" class="message"></p>
+            </div>
+
+            <div id="registerForm" class="form-container">
+                <input type="text" id="regUser" placeholder="Kullanıcı Adı (Gerçek Adın)">
+                <input type="password" id="regPass" placeholder="Şifre Belirle">
+                <button onclick="handleRegister()">Kayıt Ol</button>
+                <p id="regMsg" class="message"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ANA UYGULAMA EKRANI -->
+    <div id="appContainer">
+        <div class="header" id="pageTitle">Keşfet</div>
+
+        <div class="content">
+            <!-- 1. KEŞFET SAYFASI -->
+            <div id="pageDiscover" class="page active">
+                <div class="post-box">
+                    <textarea id="newPostText" placeholder="Okulda bugün ne haberler var?"></textarea>
+                    <label class="file-upload-label">
+                        📷 Resim / Video Seç
+                        <input type="file" id="mediaFile" accept="image/*,video/*" onchange="previewMedia()">
+                    </label>
+                    <span id="fileNameDisplay" style="font-size:12px; color:#65676b; display:block; margin-bottom:8px;"></span>
+                    <button onclick="addPost()">Paylaş</button>
+                </div>
+                <div id="postsFeedContainer"></div>
+            </div>
+
+            <!-- 2. MESAJLAR SAYFASI -->
+            <div id="pageMessages" class="page">
+                <div id="chatSelectorView">
+                    <h3>Özel Mesajlar</h3>
+                    <p style="color:#65676b; font-size:14px;">Mesajlaşmak için "Kişiler" sekmesinden bir arkadaşına tıklayıp sohbet başlatabilirsin.</p>
+                    <div id="friendsChatList"></div>
+                </div>
+
+                <div id="activeChatView" style="display:none;" class="chat-container">
+                    <div class="chat-header">
+                        <span id="chatWithTitle">Sohbet</span>
+                        <button onclick="closeChat()" style="background:#e4e6eb; color:#050505; width:auto; padding:5px 10px; font-size:12px;">Geri Dön</button>
+                    </div>
+                    <div class="chat-messages" id="chatMessages"></div>
+                    <div class="chat-input-area">
+                        <input type="text" id="chatInput" placeholder="Özel mesaj yazın..." onkeypress="handleChatKeyPress(event)">
+                        <button onclick="sendPrivateMessage()">Gönder</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. GRUPLAR SAYFASI -->
+            <div id="pageGroups" class="page">
+                <div id="groupSelectorView">
+                    <div class="post-box">
+                        <h3>👥 Yeni Grup Kur</h3>
+                        <input type="text" id="newGroupName" placeholder="Grup Adı (Örn: 10-A Sınıfı)">
+                        <button onclick="createGroup()">Grup Oluştur</button>
+                    </div>
+                    <h3>Okul Grupları</h3>
+                    <div id="groupsListContainer"></div>
+                </div>
+
+                <div id="activeGroupView" style="display:none;">
+                    <div class="chat-container">
+                        <div class="chat-header">
+                            <span id="groupChatTitle">Grup Sohbeti</span>
+                            <button onclick="closeGroupChat()" style="background:#e4e6eb; color:#050505; width:auto; padding:5px 10px; font-size:12px;">Gruplara Dön</button>
+                        </div>
+                        <div class="chat-messages" id="groupChatMessages"></div>
+                        <div class="chat-input-area">
+                            <input type="text" id="groupChatInput" placeholder="Gruba mesaj yaz..." onkeypress="handleGroupKeyPress(event)">
+                            <button onclick="sendGroupMessage()">Gönder</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. KAYITLI KİŞİLER SAYFASI -->
+            <div id="pageUsers" class="page">
+                <div style="margin-bottom: 12px;">
+                    <input type="text" id="userSearchInput" placeholder="🔍 Öğrenci ara..." oninput="loadUsersList()" style="margin-bottom: 0;">
+                </div>
+                <div id="usersListContainer"></div>
+            </div>
+
+            <!-- 5. HESAP SAYFASI -->
+            <div id="pageAccount" class="page">
+                <div class="profile-card">
+                    <div class="avatar" id="profileAvatar">?</div>
+                    <label class="file-upload-label" style="margin-top: 5px;">
+                        🖼️ Profil Resmi Değiştir
+                        <input type="file" id="avatarFileInput" accept="image/*" onchange="uploadProfileAvatar()">
+                    </label>
+                    <h2 id="profileName" style="color:#050505; margin:5px 0;">-</h2>
+                    <div id="adminPanelBtn" style="display:none; margin-top:15px;">
+                        <button onclick="toggleAdminPanel()" style="background:#ffd700; color:#000;">🛡️ Kurucu Yönetim Paneli</button>
+                    </div>
+                    <button onclick="logout()" style="background:#dc3545; color:white; margin-top:20px;">Çıkış Yap</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ALT NAVİGASYON MENÜSÜ -->
+        <div class="bottom-nav">
+            <button class="nav-item active" onclick="switchPage('discover', 'Keşfet', this)">
+                <svg viewBox="0 0 24 24"><path d="M12 2L2 12h3v8h6v-6h2v6h6v-8h3L12 2z"/></svg>
+                <span>Keşfet</span>
+            </button>
+            <button class="nav-item" onclick="switchPage('messages', 'Mesajlar', this)">
+                <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+                <span>Mesajlar</span>
+            </button>
+            <button class="nav-item" onclick="switchPage('groups', 'Gruplar', this)">
+                <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                <span>Gruplar</span>
+            </button>
+            <button class="nav-item" onclick="switchPage('users', 'Kişiler', this)">
+                <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                <span>Kişiler</span>
+            </button>
+            <button class="nav-item" onclick="switchPage('account', 'Hesap', this)">
+                <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
+                <span>Hesap</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT & FIREBASE SENKRONİZASYON KISMI -->
+    <script>
+        let currentUser = null;
+        let activeChatWith = null;
+        let activeGroupChat = null;
+        let selectedMediaBase64 = null;
+
+        const ADMIN_USERNAME = "Kurucu";
+        const ADMIN_PASSWORD = "Ahmet13mustafa";
+
+        function switchAuthTab(tabName) {
+            document.querySelectorAll('.auth-container .tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.form-container').forEach(f => f.classList.remove('active'));
+            if(tabName === 'login') {
+                document.querySelectorAll('.auth-container .tab')[0].classList.add('active');
+                document.getElementById('loginForm').classList.add('active');
+            } else {
+                document.querySelectorAll('.auth-container .tab')[1].classList.add('active');
+                document.getElementById('registerForm').classList.add('active');
+            }
+        }
+
+        function handleRegister() {
+            const user = document.getElementById('regUser').value.trim();
+            const pass = document.getElementById('regPass').value.trim();
+            const msg = document.getElementById('regMsg');
+
+            if(!user || !pass) {
+                msg.textContent = "Tüm alanları doldur!";
+                msg.className = "message error"; msg.style.display = "block";
+                return;
+            }
+
+            if(user.toLowerCase() === ADMIN_USERNAME.toLowerCase()) {
+                msg.textContent = "Bu kurucu adıdır, dışarıdan kayıt olunamaz!";
+                msg.className = "message error"; msg.style.display = "block";
+                return;
+            }
+
+            const safeKey = user.replace(/[.#$\/\[\]]/g, "_");
+            db.ref('users/' + safeKey).once('value', (snapshot) => {
+                if(snapshot.exists()) {
+                    msg.textContent = "Bu kullanıcı adı zaten alınmış!";
+                    msg.className = "message error"; msg.style.display = "block";
+                } else {
+                    db.ref('users/' + safeKey).set({
+                        username: user,
+                        password: pass,
+                        isBanned: false,
+                        avatar: null
+                    }, (error) => {
+                        if(error) {
+                            msg.textContent = "Kayıt sırasında hata oluştu!";
+                            msg.className = "message error"; msg.style.display = "block";
+                        } else {
+                            msg.textContent = "Kayıt başarılı! Giriş yapabilirsin.";
+                            msg.className = "message success"; msg.style.display = "block";
+                            document.getElementById('regUser').value = "";
+                            document.getElementById('regPass').value = "";
+                            setTimeout(() => switchAuthTab('login'), 1200);
+                        }
+                    });
+                }
+            });
+        }
+
+        function handleLogin() {
+            const user = document.getElementById('loginUser').value.trim();
+            const pass = document.getElementById('loginPass').value.trim();
+            const msg = document.getElementById('loginMsg');
+
+            if(user === ADMIN_USERNAME && pass === ADMIN_PASSWORD) {
+                currentUser = { username: ADMIN_USERNAME, isBanned: false, avatar: null };
+                openApp();
+                return;
+            }
+
+            const safeKey = user.replace(/[.#$\/\[\]]/g, "_");
+            db.ref('users/' + safeKey).once('value', (snapshot) => {
+                const foundUser = snapshot.val();
+                if(foundUser && foundUser.password === pass) {
+                    if(foundUser.isBanned) {
+                        msg.textContent = "Hesabınız engellendi (BAN)!";
+                        msg.className = "message error"; msg.style.display = "block";
+                        return;
+                    }
+                    currentUser = foundUser;
+                    openApp();
+                } else {
+                    msg.textContent = "Hatalı kullanıcı adı veya şifre!";
+                    msg.className = "message error"; msg.style.display = "block";
+                }
+            });
+        }
+
+        function openApp() {
+            document.getElementById('authContainer').style.display = "none";
+            document.getElementById('appContainer').style.display = "block";
+            loadProfile();
+            listenPosts();
+            listenUsersList();
+        }
+
+        function switchPage(pageName, title, btnElement) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById('pageTitle').textContent = title;
+            btnElement.classList.add('active');
+
+            if(pageName === 'discover') { 
+                document.getElementById('pageDiscover').classList.add('active'); 
+            }
+            if(pageName === 'messages') { 
+                document.getElementById('pageMessages').classList.add('active'); 
+                loadFriendsListForMessages(); 
+            }
+            if(pageName === 'groups') {
+                document.getElementById('pageGroups').classList.add('active');
+                loadGroupsList();
+            }
+            if(pageName === 'users') { 
+                document.getElementById('pageUsers').classList.add('active'); 
+            }
+            if(pageName === 'account') { 
+                document.getElementById('pageAccount').classList.add('active'); 
+            }
+        }
+
+        function loadProfile() {
+            document.getElementById('profileName').textContent = currentUser.username;
+            const avatarDiv = document.getElementById('profileAvatar');
+            if(currentUser.avatar) {
+                avatarDiv.innerHTML = `<img src="${currentUser.avatar}">`;
+            } else {
+                avatarDiv.textContent = currentUser.username.charAt(0).toUpperCase();
+            }
+
+            if(currentUser.username === ADMIN_USERNAME) {
+                document.getElementById('adminPanelBtn').style.display = "block";
+            }
+        }
+
+        function uploadProfileAvatar() {
+            const input = document.getElementById('avatarFileInput');
+            if(input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    currentUser.avatar = e.target.result;
+                    if(currentUser.username !== ADMIN_USERNAME) {
+                        const safeKey = currentUser.username.replace(/[.#$\/\[\]]/g, "_");
+                        db.ref('users/' + safeKey).update({ avatar: currentUser.avatar });
+                    }
+                    loadProfile();
+                    alert("Profil resminiz güncellendi!");
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function previewMedia() {
+            const fileInput = document.getElementById('mediaFile');
+            const display = document.getElementById('fileNameDisplay');
+            if(fileInput.files && fileInput.files[0]) {
+                const file = fileInput.files[0];
+                display.textContent = "Seçilen dosya: " + file.name;
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    selectedMediaBase64 = {
+                        data: e.target.result,
+                        type: file.type.startsWith('video') ? 'video' : 'image'
+                    };
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function addPost() {
+            const text = document.getElementById('newPostText').value.trim();
+            if(!text && !selectedMediaBase64) return;
+
+            const newPostRef = db.ref('posts').push();
+            newPostRef.set({
+                id: newPostRef.key,
+                author: currentUser.username,
+                content: text,
+                media: selectedMediaBase64 || null,
+                likes: {},
+                pinned: false
+            });
+
+            document.getElementById('newPostText').value = "";
+            document.getElementById('mediaFile').value = "";
+            document.getElementById('fileNameDisplay').textContent = "";
+            selectedMediaBase64 = null;
+        }
+
+        function toggleLike(postId) {
+            const likeRef = db.ref(`posts/${postId}/likes/${currentUser.username.replace(/[.#$\/\[\]]/g, "_")}`);
+            likeRef.once('value', (snapshot) => {
+                if(snapshot.exists()) {
+                    likeRef.remove();
+                } else {
+                    likeRef.set(true);
+                }
+            });
+        }
+
+        function deletePost(postId) {
+            if(confirm("Bu gönderiyi silmek istediğinden emin misin?")) {
+                db.ref(`posts/${postId}`).remove();
+            }
+        }
+
+        function listenPosts() {
+            db.ref('posts').on('value', (snapshot) => {
+                const container = document.getElementById('postsFeedContainer');
+                container.innerHTML = "";
+                const postsData = snapshot.val();
+
+                if(!postsData) {
+                    container.innerHTML = "<p style='text-align:center; color:#65676b;'>Henüz paylaşım yapılmadı.</p>";
+                    return;
+                }
+
+                let posts = Object.values(postsData);
+                posts.reverse();
+
+                posts.forEach(p => {
+                    const isAdmin = currentUser.username === ADMIN_USERNAME;
+                    const isPostAdmin = p.author === ADMIN_USERNAME;
+                    const likesCount = p.likes ? Object.keys(p.likes).length : 0;
+                    const isLiked = p.likes && p.likes[currentUser.username.replace(/[.#$\/\[\]]/g, "_")];
+
+                    const postDiv = document.createElement('div');
+                    postDiv.className = `post-card ${isPostAdmin ? 'admin-post' : ''}`;
+                    
+                    let mediaHtml = '';
+                    if(p.media) {
+                        if(p.media.type === 'video') {
+                            mediaHtml = `<video src="${p.media.data}" controls class="post-media"></video>`;
+                        } else {
+                            mediaHtml = `<img src="${p.media.data}" class="post-media" alt="Medya">`;
+                        }
+                    }
+
+                    let adminTag = isPostAdmin ? '<div class="admin-badge-tag">👑 KURUCU PAYLAŞIMI</div>' : '';
+                    let deleteBtn = (isAdmin || p.author === currentUser.username) ? `<button onclick="deletePost('${p.id}')" class="admin-btn">Sil</button>` : '';
+
+                    postDiv.innerHTML = `
+                        ${adminTag}
+                        <div class="post-header">
+                            <span class="post-author">@${p.author}</span>
+                        </div>
+                        <div class="post-text">${p.content || ""}</div>
+                        ${mediaHtml}
+                        <div class="post-actions">
+                            <button onclick="toggleLike('${p.id}')" class="like-btn ${isLiked ? 'liked' : ''}">❤️ Beğen (${likesCount})</button>
+                            ${deleteBtn}
+                        </div>
+                    `;
+                    container.appendChild(postDiv);
+                });
+            });
+        }
+
+        function listenUsersList() {
+            db.ref('users').on('value', (snapshot) => {
+                const container = document.getElementById('usersListContainer');
+                if(!container) return;
+                container.innerHTML = "";
+                const usersData = snapshot.val();
+                if(!usersData) return;
+
+                Object.values(usersData).forEach(u => {
+                    if(u.username === currentUser.username) return;
+
+                    const item = document.createElement('div');
+                    item.className = "user-list-item";
+                    item.innerHTML = `
+                        <div class="user-info">
+                            <div class="user-avatar-small">${u.username.charAt(0).toUpperCase()}</div>
+                            <strong>@${u.username}</strong>
+                        </div>
+                        <button class="msg-btn" onclick="startPrivateChat('${u.username}')">Mesaj Gönder</button>
+                    `;
+                    container.appendChild(item);
+                });
+            });
+        }
+
+        function loadFriendsListForMessages() {
+            db.ref('users').once('value', (snapshot) => {
+                const container = document.getElementById('friendsChatList');
+                container.innerHTML = "";
+                const usersData = snapshot.val();
+                if(!usersData) return;
+
+                Object.values(usersData).forEach(u => {
+                    if(u.username === currentUser.username) return;
+                    const item = document.createElement('div');
+                    item.className = "user-list-item";
+                    item.innerHTML = `
+                        <div class="user-info">
+                            <strong>@${u.username}</strong>
+                        </div>
+                        <button class="msg-btn" onclick="startPrivateChat('${u.username}')">Sohbeti Aç</button>
+                    `;
+                    container.appendChild(item);
+                });
+            });
+        }
+
+        function startPrivateChat(otherUser) {
+            activeChatWith = otherUser;
+            document.getElementById('chatSelectorView').style.display = "none";
+            document.getElementById('activeChatView').style.display = "block";
+            document.getElementById('chatWithTitle').textContent = "@" + otherUser + " ile Sohbet";
+            
+            const chatId = [currentUser.username, otherUser].sort().join("_").replace(/[.#$\/\[\]]/g, "_");
+            db.ref('chats/' + chatId).on('value', (snapshot) => {
+                const msgContainer = document.getElementById('chatMessages');
+                msgContainer.innerHTML = "";
+                const msgs = snapshot.val();
+                if(msgs) {
+                    Object.values(msgs).forEach(m => {
+                        const bubble = document.createElement('div');
+                        bubble.className = `chat-bubble ${m.sender === currentUser.username ? 'mine' : 'other'}`;
+                        bubble.textContent = m.text;
+                        msgContainer.appendChild(bubble);
+                    });
+                    msgContainer.scrollTop = msgContainer.scrollHeight;
+                }
+            });
+        }
+
+        function sendPrivateMessage() {
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if(!text || !activeChatWith) return;
+
+            const chatId = [currentUser.username, activeChatWith].sort().join("_").replace(/[.#$\/\[\]]/g, "_");
+            db.ref('chats/' + chatId).push({
+                sender: currentUser.username,
+                text: text,
+                timestamp: Date.now()
+            });
+            input.value = "";
+        }
+
+        function handleChatKeyPress(e) {
+            if(e.key === 'Enter') sendPrivateMessage();
+        }
+
+        function closeChat() {
+            activeChatWith = null;
+            document.getElementById('activeChatView').style.display = "none";
+            document.getElementById('chatSelectorView').style.display = "block";
+        }
+
+        function createGroup() {
+            const groupName = document.getElementById('newGroupName').value.trim();
+            if(!groupName) return;
+
+            db.ref('groups').push({
+                name: groupName,
+                creator: currentUser.username
+            });
+            document.getElementById('newGroupName').value = "";
+        }
+
+        function loadGroupsList() {
+            db.ref('groups').on('value', (snapshot) => {
+                const container = document.getElementById('groupsListContainer');
+                if(!container) return;
+                container.innerHTML = "";
+                const groups = snapshot.val();
+                if(!groups) {
+                    container.innerHTML = "<p style='color:#65676b; font-size:14px;'>Henüz grup kurulmamış.</p>";
+                    return;
+                }
+
+                Object.entries(groups).forEach(([id, g]) => {
+                    const item = document.createElement('div');
+                    item.className = "user-list-item";
+                    item.innerHTML = `
+                        <div><strong>${g.name}</strong> <br><small>Kurucu: @${g.creator}</small></div>
+                        <button class="msg-btn" onclick="openGroupChat('${id}', '${g.name}')">Gruba Gir</button>
+                    `;
+                    container.appendChild(item);
+                });
+            });
+        }
+
+        function openGroupChat(groupId, groupName) {
+            activeGroupChat = groupId;
+            document.getElementById('groupSelectorView').style.display = "none";
+            document.getElementById('activeGroupView').style.display = "block";
+            document.getElementById('groupChatTitle').textContent = groupName;
+
+            db.ref('groupChats/' + groupId).on('value', (snapshot) => {
+                const container = document.getElementById('groupChatMessages');
+                container.innerHTML = "";
+                const msgs = snapshot.val();
+                if(msgs) {
+                    Object.values(msgs).forEach(m => {
+                        const bubble = document.createElement('div');
+                        bubble.className = `chat-bubble ${m.sender === currentUser.username ? 'mine' : 'other'}`;
+                        bubble.textContent = `${m.sender}: ${m.text}`;
+                        container.appendChild(bubble);
+                    });
+                    container.scrollTop = container.scrollHeight;
+                }
+            });
+        }
+
+        function sendGroupMessage() {
+            const input = document.getElementById('groupChatInput');
+            const text = input.value.trim();
+            if(!text || !activeGroupChat) return;
+
+            db.ref('groupChats/' + activeGroupChat).push({
+                sender: currentUser.username,
+                text: text,
+                timestamp: Date.now()
+            });
+            input.value = "";
+        }
+
+        function handleGroupKeyPress(e) {
+            if(e.key === 'Enter') sendGroupMessage();
+        }
+
+        function closeGroupChat() {
+            activeGroupChat = null;
+            document.getElementById('activeGroupView').style.display = "none";
+            document.getElementById('groupSelectorView').style.display = "block";
+        }
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('appContainer').style.display = "none";
+            document.getElementById('authContainer').style.display = "flex";
+        }
+    </script>
+</body>
+</html>
